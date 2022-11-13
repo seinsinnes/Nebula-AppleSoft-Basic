@@ -1,0 +1,155 @@
+5 rem prompt user for angle
+10 print "i will draw you a tree"
+20 input "enter an angle in radians"; da
+
+25 rem high resolution graphics
+
+30 rem initial variables
+35 shrink = 0.67
+37 pi = 3.14159265359
+40 a = pi * 0.5
+45 l = 80
+50 level = 1
+55 mxlev = 10
+60 x = 160 : y = 200
+65 rem array for stack of tree positions
+70 dim s(mxlev) : dim t(mxlev)
+
+100 rem set vic address
+110 v = 53248
+120 rem set graphic ram address
+130 ga = 8192
+140 rem set video ram address
+150 vr = 1024
+160 rem set border to black
+170 poke v+32,0
+500 gosub 20000 : rem turn on hires
+510 gosub 21000 : rem graphic ram area
+520 gosub 22000 : rem set color ram
+530 gosub 23000 : rem clr graphic ram
+540 rem start branching
+550 gosub 1000
+554 poke 198,0 : wait 198,1
+558 gosub 24000
+560 end
+
+1000 rem draw a single branch!
+
+1010 rem calculate next point
+1020 dx = l * cos(a)
+1030 dy = -l * sin(a)
+
+1040 rem draw branch
+1050 x1 = int(x) : x2 = int(x + dx)
+1060 y1 = int(y) : y2 = int(y + dy)
+1062 rem print 1,mxlev
+1064 rem print x1,y1
+1065 rem print x2,y2
+1066 gosub 11000
+
+1070 rem save position
+1080 s(level) = x : t(level) = y
+
+1090 rem next branch
+1100 x = x + dx : y = y + dy
+1110 level = level + 1
+1120 a = a + da
+1130 l = l * shrink
+1136 rem print 2,mxlev
+1140 if level < mxlev then gosub 1000
+
+1150 rem and another branch
+1160 a = a - da * 2
+1170 if level < mxlev then gosub 1000
+
+1180 rem pop back
+1190 a = a + da
+1200 l = l / shrink
+1210 level = level - 1
+1220 x = s(level) : y = t(level)
+1230 return
+
+11000 rem draw line
+11100 dsx = x2 - x1
+11150 dty = y2 - y1
+11160 if dsx < 0 then xs = x2 : x2 = x1 : x1 = xs : dsx = x2 - x1 : ys = y2 : y2 = y1 : y1 = ys : dty = y2 - y1
+11175 rem print 3,mxlev
+11180 if dsx <> 0 and dty<>0 then gosub 11200
+11190 if dsx = 0 and dty<>0 then gosub 15100
+11193 if dsx <> 0 and dty=0 then gosub 16100
+11196 return
+
+11200 for xc = x1 to x2
+11300 yc = int(y1 + dty * (xc - x1) / dsx)
+11400 gosub 30000 : rem set (xc,yc)
+11500 next xc
+11550 rem print x2,xc
+11560 rem print y2,yc
+15000 return
+
+15100 if y2 < y1 then ys = y2 : y2 = y1 : y1 = ys
+15150 for yc = y1 to y2
+15250 xc = x1
+15350 rem print 4,mxlev
+15450 gosub 30000 : rem set (xc,yc)
+15550 next yc
+15650 return
+
+16100 for xc = x1 to x2
+16200 yc = y1
+16300 gosub 30000 : rem set (xc,yc)
+16400 next xc
+16700 return
+
+20000 rem turn on hi res graphics
+20010 rem   1. set bits 5/6 of v+17
+20020 rem   2. clr bit 4 of v+22
+20030 poke v+17,peek(v+17) or (11*16)
+20040 poke v+22,peek(v+22) and (255-16)
+20050 return
+
+21000 rem set graphic ram area
+21010 rem   1. set bit 3 of v+24
+21020 poke v+24, peek(v+24) or 8
+21030 return
+22000 rem set color ram
+22010 rem   1. color ram is 1024-2023
+22020 rem   2. set background 1 - white
+22030 rem   3. set foreground 0 - black
+22040 co = 0*16 + 1
+22050 for i = vr to vr+1000
+22060 poke i,co
+22070 next i
+22080 return
+23000 rem clear graphic ram
+23010 rem   1. graphic ram is ga to
+23020 rem        ga + 8000
+23030 for i = ga to ga +8000
+23040 poke i,0
+23050 next i
+23060 return
+24000 rem turn graphics off
+24010 rem   1. clr bits 5/6 of v+17
+24020 rem   2. clr bit 4 of v+22
+24030 rem   3. clr bit 3 of v+24
+24040 poke v+17,peek(v+17) and (255-96)
+24050 poke v+22,peek(v+22) and (255-16)
+24060 poke v+24,peek(v+24) and (255-8)
+24070 return
+30000 rem set pixel
+30010 ra = 320*int(yc/8)+(yc and 7)
+30020 ba = 8*int(xc/8)
+30025 rem print 7,mxlev
+30030 ma = 2^(7-(xc and 7))
+30040 ad = ga + ra + ba
+30045 rem print 5,mxlev
+30050 poke ad,peek(ad) or  ma
+30055 rem print 6,mxlev
+30060 return
+31000 rem clr pixel
+31010 ra = 320*int(yc/8)+(yc and 7)
+31020 ba = 8*int(xc/8)
+31030 ma = 255-2^(7-(xc and 7))
+31040 ad = ga + ra + ba
+31050 poke ad,peek(ad) or  ma
+31060 return
